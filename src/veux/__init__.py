@@ -20,7 +20,7 @@ def Canvas(subplots=None, backend=None):
 
 
 
-def serve(thing, viewer=None, port=None, view_options=None):
+def serve(thing, viewer=None, port=None, view_options=None)->None:
     """
     Serve the given thing using the specified viewer and port.
 
@@ -58,6 +58,7 @@ def serve(thing, viewer=None, port=None, view_options=None):
             "show_quit": True,
             "quit_on_load": False,
         }
+
     if hasattr(thing, "canvas"):
         # artist was passed
         canvas = thing.canvas
@@ -70,17 +71,16 @@ def serve(thing, viewer=None, port=None, view_options=None):
         return
 
     if hasattr(canvas, "to_glb"):
-        viewer = Viewer(canvas, **view_options)
-        server = veux.server.Server(viewer=viewer)
+        viewer_ = Viewer(canvas, **view_options)
+        server = veux.server.Server(viewer=viewer_)
         server.run(port=port)
 
     elif hasattr(canvas, "to_html"):
         server = veux.server.Server(html=canvas.to_html())
         server.run(port=port)
 
-
     else:
-        raise ValueError("Cannot serve artist")
+        raise ValueError("Cannot serve object.")
 
 
 def _create_canvas(name=None, config=None):
@@ -221,7 +221,7 @@ def create_artist(
            model, ndf=6,
            canvas="gltf",
            vertical=2,
-           **opts):
+           **opts)->FrameArtist:
     """
     Create an :ref:`artist` for a model::
 
