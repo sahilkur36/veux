@@ -21,7 +21,7 @@ class FrameArtist:
     ndm:    int
     ndf:    int
     model:  "FrameModel"
-    canvas: "Canvas"
+    canvas: "veux.canvas.Canvas"
 
     def __init__(self,
                  model_data,
@@ -373,7 +373,11 @@ class FrameArtist:
 
 
 
-    def draw_outlines_(self, state=None, config=None, scale=1.0, style=None, skip=None):
+    def draw_outlines_(self,
+                       state=None,
+                       position=None, 
+                       rotation=None,
+                       config=None, scale=1.0, style=None, skip=None):
         """
         Draw the outlines of the model elements such as frames, planes, and solids.
         Interpolate if possible. This is expensive.
@@ -408,6 +412,13 @@ class FrameArtist:
             # Because "state" is given as opposed to position/displacement, we assume
             # linearized rotations for now.
             config["frame"]["basis"] = "Hermite"
+        elif position is not None or rotation is not None:
+            state = self.model.wrap_state(state=None,
+                                          position=position,
+                                          rotation=rotation,
+                                          scale=scale,
+                                          transform=self.dofs2plot)
+            config["frame"]["basis"] = None
 
         self._draw_frame_lines(state=state, config=config, scale=scale, style=style, skip=skip)
 
@@ -447,7 +458,9 @@ class FrameArtist:
             self.canvas.plot_lines(nodes, indices=np.array(solids),
                                           style=config["solid"]["style"])
 
-    def draw_outlines(self, state=None, config=None, scale=1.0, style=None, skip=None):
+    def draw_outlines(self,
+                      state=None,
+                      config=None, scale=1.0, style=None, skip=None):
         """
         Draw the outlines of the model elements such as frames, planes, and solids.
         Interpolate if possible.
@@ -541,8 +554,13 @@ class FrameArtist:
 
 
     def draw_sections(self,
-                      state=None, rotation=None, position=None, scale=1.0,
-                      mesh_style=None, config=None):
+                      state=None, 
+                      rotation=None, 
+                      position=None, 
+                      scale=1.0,
+                      mesh_style=None, 
+                      config=None,
+                      outline=None):
         """
         Draw beam elements with extruded cross-sections. By default, cross-sectional
         information is extracted from the model by various means.
@@ -578,6 +596,9 @@ class FrameArtist:
         if mesh_style is not None:
             config["frame"]["style"] = mesh_style
 
+        if outline is not None and outline is False and "outline" in config["frame"]:
+            del config["frame"]["outline"]
+
         # Draw extruded frames
         from veux.frame import extrude
         extrude.draw_extrusions3(model,
@@ -599,6 +620,7 @@ class FrameArtist:
 
     def draw_surfaces(self,
                       state=None, field=None,  # States
+                      position=None, rotation=None,
                       normal=None,
                       config=None, scale=1.0, style=None): # Drawing
         """
@@ -621,6 +643,13 @@ class FrameArtist:
 
         if state is not None:
             state = model.wrap_state(state, scale=scale, transform=self.dofs2plot)
+        
+        elif position is not None and rotation is not None:
+            state = model.wrap_state(state=None,
+                                     position=position,
+                                     rotation=rotation,
+                                     scale=scale,
+                                     transform=self.dofs2plot)
 
         if config is None:
             from veux.config import SketchConfig
@@ -631,7 +660,7 @@ class FrameArtist:
                 config["plane"]["style"] = style
 
         # Draw extruded frames
-        if "frame" in config and config["frame"]["show"]:
+        if False and "frame" in config and config["frame"]["show"]:
             from veux.frame import extrude
             extrude.draw_extrusions3(model,
                                     canvas=self.canvas,
@@ -686,7 +715,10 @@ class FrameArtist:
 
         coord = np.array([R@self.model.node_position(tag, state=state) for tag in self.model.iter_node_tags()])
         
-        self.canvas.plot_nodes(coord[:,:self.ndm], label=label,
+        self.canvas.plot_nodes(coord[:,:self.ndm],
+                               label=label,
+                               names=[str(k)
+                                       for i,k in enumerate(self.model.iter_node_tags())],
                                rotations=rotations,
                                style=config["node"]["style"])
 
@@ -746,7 +778,7 @@ class FrameArtist:
             origin = default["origin"]
             self.draw_origin(line_style=origin["axes"]["style"],
                                   scale=origin["axes"]["scale"],
-                                  label=origin["axes"]["label"])
+                                  label=origin["axes"]["label"], extrude=True)
 
         # Reference
         if ("reference" in self.config["sketches"] \
@@ -769,6 +801,7 @@ class FrameArtist:
 
     def _repr_html_(self):
         from veux.viewer import Viewer
+        import textwrap
         viewer = Viewer(self,
                         size=(800, 600),
                         hosted=False,
