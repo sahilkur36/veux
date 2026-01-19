@@ -732,7 +732,7 @@ class FrameArtist:
     def draw_edges(self, state=None, config=None, scale=1.0):
         pass
 
-    def draw_axes(self, state=None, config=None, extrude=False):
+    def draw_axes(self, state=None, config=None, extrude=False, size=None):
         Ra = self._plot_rotation
         if config is None:
             from veux.config import SketchConfig
@@ -751,7 +751,10 @@ class FrameArtist:
                 continue
 
             crd = self.model.cell_position(tag, state=state) #el["crd"]
-            scale = np.linalg.norm(crd[-1] - crd[0])/15
+            if size is None:
+                scale = np.linalg.norm(crd[-1] - crd[0])/15
+            else:
+                scale = size
             coord = sum(i for i in crd)/len(self.model.cell_indices(tag))
             xyz[i,:,:] = np.array([Ra@coord]*3)
             uvw[i,:,:] = scale*axes
